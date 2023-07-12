@@ -43,7 +43,7 @@ class CropStage(object):
         self.__sp: float = sp
 
     # Which part of the stage initialisation occurs in the current period?
-    def area_fraction(self, period) -> float:
+    def area_fraction(self, period:int) -> float:
         # Initialise
         result: float = 0.0
         
@@ -81,7 +81,7 @@ class CropStage(object):
                     result = 1.0 / self.__sp            
         return result
         
-    def area_time_fraction(self, period):
+    def area_time_fraction(self, period:int):
         # We want to know what part of the area * time in this period is covered by this crop stage
         result: float = 0.0
         base: float = 0.0
