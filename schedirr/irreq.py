@@ -3,6 +3,7 @@ from pathlib import Path
 from array import array
 from math import floor
 from cropstage import CropStage
+import copy
 
 # Declare types
 PathLike = TypeVar("PathLike", str, Path)
@@ -48,42 +49,79 @@ def water_balance(M:int, ET0:float, RE:float, PR:float, ep:float, Kc0, SR0, DR, 
     result = sum(IRQ) / ep
     return result
 
-def irr_proc(u1:int, un:int, sp:float, ep:float, fn_enviro:PathLike, fn_cropcult:PathLike):
+# Read the data wrt. climate and soil; assume a text file
+def read_env_data(fn:PathLike) -> List[array]:
     # Local variables
     i: int
     buf: List[str]
     lines: List[str]
     
-    # Read the data wrt. climate and soil
+    # Read the lines
     with open(fn_enviro, 'r', encoding="utf-16") as enviro:
         # Read all lines but remove empty ones
         buf = enviro.readlines()
         lines = [r for r in buf if not r.isspace()]
         umax: int = len(lines[1:])
-        
-        # Dimension the arrays
-        ET0: array = array('f', umax * [0.0]) # evapotranspiration
-        RE: array =  array('f', umax * [0.0]) # effective rainfall
-        PR: array =  array('f', umax * [0.0]) # percolation requirement 
-        for i, line in zip(range(umax), lines[1:]):
-            dummy, v1, v2, v3 = line.split() # dummy and 3 values
-            ET0[i], RE[i], PR[i] = float(v1), float(v2), float(v3)
-            
-    # Read data wrt. the crop stages
+    
+    # Prepare the output structure    
+    result: List[array] = []
+    for u in range(umax): result.append(copy.deepcopy(array('f', 3 * [0.0])))
+    
+    # Split the lines and assign the values
+    for i, line in zip(range(umax), lines[1:]):
+        dummy, v1, v2, v3 = line.split() # dummy and 3 values
+        result[i][0], result[i][1], result[i][2] = float(v1), float(v2), float(v3)
+    return result
+
+# Read data wrt. the crop stages
+def read_crop_stages(fn:PathLike) -> List[array]:
+    # Local variables
+    i: int
+    buf: List[str]
+    lines: List[str]
+    
+    # Read the lines
     with open(fn_cropcult, 'r', encoding="utf-16") as cropcult:
         # Read all lines but remove empty ones
         buf = cropcult.readlines()
         lines = [r for r in buf if not r.isspace()]
-        vmax = len(lines[1:])
-        
-        # Dimension the arrays
-        D:  array =  array('f', vmax * [0.0]) # duration
-        Kc: array = array('f', vmax * [0.0]) # crop coefficient
-        SR: array = array('f', vmax * [0.0]) # special requirement
-        DS: array = array('f', vmax * [0.0]) # depletion of stored water
-        for i, line in zip(range(vmax), lines[1:]):
-            dummy, v1, v2, v3, v4 = line.split() # dummy and 4 values
-            D[i], Kc[i], SR[i], DS[i] = float(v1), float(v2), float(v3), float(v4)
+        vmax: int = len(lines[1:])
+    
+    # Prepare the output structure
+    result: List[array] = []
+    for v in range(vmax): result.append(copy.deepcopy(array('f', 4 * [0.0])))
+    
+    # Split the lines and assign the values
+    for i, line in zip(range(vmax), lines[1:]):
+        dummy, v1, v2, v3, v4 = line.split() # dummy and 3 values
+        result[i][0], result[i][1], result[i][2], result[i][3] = float(v1), float(v2), float(v3), float(v4)
+    return result
+    
+def irr_proc(u1:int, un:int, sp:float, ep:float, fn_enviro:PathLike, fn_cropcult:PathLike):
+    # Read the environmental data
+    env_data = read_env_data(fn_enviro)
+    umax = len(env_data)
+
+    # Dimension the arrays
+    ET0: array = array('f', umax * [0.0]) # evapotranspiration
+    RE: array =  array('f', umax * [0.0]) # effective rainfall
+    PR: array =  array('f', umax * [0.0]) # percolation requirement 
+    for i in range(umax):
+        arr: array  = env_data[i]
+        ET0[i], RE[i], PR[i] = arr[0], arr[1], arr[2]
+            
+    # Read the data wrt. the crop calendar
+    stg_data = read_crop_stages(fn_cropcult)
+    vmax = len(stg_data)
+            
+    # Dimension the arrays
+    D:  array =  array('f', vmax * [0.0]) # duration
+    Kc: array = array('f', vmax * [0.0]) # crop coefficient
+    SR: array = array('f', vmax * [0.0]) # special requirement
+    DS: array = array('f', vmax * [0.0]) # depletion of stored water
+    for i in range(vmax):
+        arr = stg_data[i]
+        D[i], Kc[i], SR[i], DS[i] = arr[0], arr[1], arr[2], arr[3]
 
     # Check spreading period
     if sp > umax:
@@ -162,9 +200,9 @@ if __name__ == "__main__":
     # Periods are zero-based
     u1: int = 1 # January
     un: int = 9 # September
-    sp = 1.0 
+    sp = 1.0
     ep = 0.65
-    fn_enviro = Path("../../data/enviro.txt")
-    fn_cropcult = Path("../../data/dry_season.txt")
+    fn_enviro = Path("./tests/data/enviro.txt")
+    fn_cropcult = Path("./tests/data/dry_season.txt")
     irr_proc(u1, un, sp, ep, fn_enviro, fn_cropcult)
 
