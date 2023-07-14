@@ -1,6 +1,10 @@
+# -*- coding: latin-1 -*-
+# Copyright (c) 2023 WUR, Wageningen
 import unittest
 from . import test_area_fractions
 from . import test_area_time_fractions 
+
+__author__ = "Steven B. Hoek"
 
 def make_test_suite():
     """Assemble test suite and return it

@@ -7,7 +7,7 @@ class TestAreaFractions(unittest.TestCase):
     test_class = None
     
     def test_sum_of_fractions_per_stage(self):
-        
+        pass
         
         # The sum of all 
         
