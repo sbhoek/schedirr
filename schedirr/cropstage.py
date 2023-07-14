@@ -1,7 +1,12 @@
+# -*- coding: latin-1 -*-
+# Copyright (c) 2023 WUR, Wageningen
+""" cropstage - a Python module with a class that represents a crop stage """
 from typing import NewType, TypeVar, List, Tuple
 from array import array
 from math import floor, ceil
-eps = 0.0000001        
+eps = 0.0000001
+
+__author__ = "Steven B. Hoek"      
         
 class CropStage(object):
     '''
@@ -81,7 +86,7 @@ class CropStage(object):
                     result = 1.0 / self.__sp            
         return result
         
-    def area_time_fraction(self, period:int):
+    def area_time_fraction(self, period:int) -> float:
         # We want to know what part of the area * time in this period is covered by this crop stage
         result: float = 0.0
         base: float = 0.0
@@ -165,19 +170,19 @@ class CropStage(object):
         return result
         
     @property
-    def sp(self):
+    def sp(self) -> float:
         return self.__sp
     
     @property
-    def start(self):
+    def start(self) -> float:
         return self.__start
     
     @property
-    def duration(self):
+    def duration(self) -> float:
         return self.__duration
     
     @property
-    def time(self):
+    def time(self) -> float:
         return self.__time    
     
 def main():
