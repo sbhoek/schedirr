@@ -1,12 +1,18 @@
+# -*- coding: latin-1 -*-
+# Copyright (c) 2023 WUR, Wageningen
+""" irreq - a Python module for making calculations with regard to irrigation scheduling """
 from typing import NewType, TypeVar, List, Tuple
+from collections.abc import Sequence
 from pathlib import Path
 from array import array
 from math import floor
 from cropstage import CropStage
-import copy
+from configparser import ConfigParser
+from sys import argv
+from customtypes import PathLike, ArrayLike 
+from fileinput import TextInputReader
 
-# Declare types
-PathLike = TypeVar("PathLike", str, Path)
+__author__ = "Steven B. Hoek"
 
 # Declare constants
 eps: float = 0.0000001
@@ -49,78 +55,33 @@ def water_balance(M:int, ET0:float, RE:float, PR:float, ep:float, Kc0, SR0, DR, 
     result = sum(IRQ) / ep
     return result
 
-# Read the data wrt. climate and soil; assume a text file
-def read_env_data(fn:PathLike) -> List[array]:
-    # Local variables
-    i: int
-    buf: List[str]
-    lines: List[str]
+# Input data wrt. environment and crop calendar may be lists of normal arrays or lists of numpy arrays
+def irr_proc(u1:int, un:int, sp:float, ep:float, env_data:Sequence[ArrayLike], stage_data:Sequence[ArrayLike]):
+    # Declare
+    arr: ArrayLike
     
-    # Read the lines
-    with open(fn_enviro, 'r', encoding="utf-16") as enviro:
-        # Read all lines but remove empty ones
-        buf = enviro.readlines()
-        lines = [r for r in buf if not r.isspace()]
-        umax: int = len(lines[1:])
-    
-    # Prepare the output structure    
-    result: List[array] = []
-    for u in range(umax): result.append(copy.deepcopy(array('f', 3 * [0.0])))
-    
-    # Split the lines and assign the values
-    for i, line in zip(range(umax), lines[1:]):
-        dummy, v1, v2, v3 = line.split() # dummy and 3 values
-        result[i][0], result[i][1], result[i][2] = float(v1), float(v2), float(v3)
-    return result
-
-# Read data wrt. the crop stages
-def read_crop_stages(fn:PathLike) -> List[array]:
-    # Local variables
-    i: int
-    buf: List[str]
-    lines: List[str]
-    
-    # Read the lines
-    with open(fn_cropcult, 'r', encoding="utf-16") as cropcult:
-        # Read all lines but remove empty ones
-        buf = cropcult.readlines()
-        lines = [r for r in buf if not r.isspace()]
-        vmax: int = len(lines[1:])
-    
-    # Prepare the output structure
-    result: List[array] = []
-    for v in range(vmax): result.append(copy.deepcopy(array('f', 4 * [0.0])))
-    
-    # Split the lines and assign the values
-    for i, line in zip(range(vmax), lines[1:]):
-        dummy, v1, v2, v3, v4 = line.split() # dummy and 3 values
-        result[i][0], result[i][1], result[i][2], result[i][3] = float(v1), float(v2), float(v3), float(v4)
-    return result
-    
-def irr_proc(u1:int, un:int, sp:float, ep:float, fn_enviro:PathLike, fn_cropcult:PathLike):
-    # Read the environmental data
-    env_data = read_env_data(fn_enviro)
+    # Dimension the arrays - internally we'll work with normal arrays
     umax = len(env_data)
-
-    # Dimension the arrays
     ET0: array = array('f', umax * [0.0]) # evapotranspiration
     RE: array =  array('f', umax * [0.0]) # effective rainfall
-    PR: array =  array('f', umax * [0.0]) # percolation requirement 
+    PR: array =  array('f', umax * [0.0]) # percolation requirement
+    
+    # Read the environmental data - assume this order: ET0, rainfall and percolation
     for i in range(umax):
-        arr: array  = env_data[i]
+        arr = env_data[i]
         ET0[i], RE[i], PR[i] = arr[0], arr[1], arr[2]
             
-    # Read the data wrt. the crop calendar
-    stg_data = read_crop_stages(fn_cropcult)
-    vmax = len(stg_data)
-            
-    # Dimension the arrays
+    # Dimension the arrays - internally we'll work with normal arrays
+    vmax = len(stage_data)
     D:  array =  array('f', vmax * [0.0]) # duration
     Kc: array = array('f', vmax * [0.0]) # crop coefficient
     SR: array = array('f', vmax * [0.0]) # special requirement
     DS: array = array('f', vmax * [0.0]) # depletion of stored water
+    
+    # Read the data wrt. the crop calendar - assume this order: duration, crop coefficient,
+    # special requirement and depletion
     for i in range(vmax):
-        arr = stg_data[i]
+        arr = stage_data[i]
         D[i], Kc[i], SR[i], DS[i] = arr[0], arr[1], arr[2], arr[3]
 
     # Check spreading period
@@ -197,12 +158,55 @@ def irr_proc(u1:int, un:int, sp:float, ep:float, fn_enviro:PathLike, fn_cropcult
         raise NotImplementedError("Not able to handle function call with u1 > un!")
 
 if __name__ == "__main__":
-    # Periods are zero-based
-    u1: int = 1 # January
-    un: int = 9 # September
-    sp = 1.0
-    ep = 0.65
-    fn_enviro = Path("./tests/data/enviro.txt")
-    fn_cropcult = Path("./tests/data/dry_season.txt")
-    irr_proc(u1, un, sp, ep, fn_enviro, fn_cropcult)
+    # Get the name of the configuration file
+    config = ConfigParser()
+    if len(argv) == 1:
+        # Assume that input is taken from file params.ini
+        ini_fn = "params.ini"
+    else:
+        ini_fn = str(argv[1])
+    if not Path(ini_fn).exists(): ValueError("File %s not found!")
+    
+    # Declare
+    fn_enviro: PathLike
+    fn_cropcult: PathLike
+    
+    # Prepare to read the input files
+    config.read(ini_fn)
+    if 'FilenameEnvironmentalData' in config['DEFAULT']:
+        fn_enviro = config['DEFAULT']['FilenameEnvironmentalData']
+        fn_enviro = Path(fn_enviro)
+        if not fn_enviro.exists(): raise ValueError("Filename with environmental data not found!")
+    if 'FilenameCropCalendarData' in config["DEFAULT"]:
+        fn_cropcult = config['DEFAULT']['FilenameCropCalendarData']
+        fn_cropcult = Path(fn_cropcult)
+        if not fn_cropcult.exists(): raise ValueError("Filename with crop calendar not found!")
+    
+    try:
+        # Periods are 1-based, so 1 is for January etc.
+        if 'FirstMonth' in config['DEFAULT']:
+            u1: int = int(config['DEFAULT']['FirstMonth'])
+        else:
+            ValueError('Key FirstMonth missing in configuration')
+        if 'LastMonth' in config['DEFAULT']:
+            un: int = int(config['DEFAULT']['LastMonth'])
+        else:
+            ValueError('Key LastMonth missing in configuration')
+        if 'SpreadingPeriod' in config['DEFAULT']:
+            sp: float = float(config['DEFAULT']['SpreadingPeriod'])
+        else:
+            ValueError('Key SpreadingPeriod missing in configuration')
+        if 'Efficiency' in config['DEFAULT']:
+            ep: float = float(config['DEFAULT']['Efficiency'])
+        else:
+            ValueError('Key Efficiency missing in configuration')          
+    
+    except Exception as e:
+        print(e) 
+        raise Exception(e)
 
+    # Now read the input files    
+    tir = TextInputReader()
+    env_data = tir.read_env_data(fn_enviro)
+    stage_date = tir.read_crop_stages(fn_cropcult)
+    irr_proc(u1, un, sp, ep, env_data, stage_date)
