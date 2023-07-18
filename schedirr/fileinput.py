@@ -1,22 +1,29 @@
 # -*- coding: latin-1 -*-
 # Copyright (c) 2023 WUR, Wageningen
 """ fileinput - a Python module for reading input data from text, CSV and TSV files """
-from typing import NewType, TypeVar, List, Tuple
-from collections.abc import Iterable, Sequence
+from typing import NewType, TypeVar, List, Any
+from collections.abc import Sequence
 from pathlib import Path
-from array import array
-from customtypes import PathLike, ArrayLike
+from array import array 
 import copy
 import csv
 
 __author__ = "Steven B. Hoek"
 
+# Declaration of some types - needs to be repeated in every module
+PathLike = TypeVar("PathLike", str, Path)
+try:
+    import numpy as np
+    ArrayLike = TypeVar("ArrayLike", array, np.ndarray) 
+except ImportError:
+    ArrayLike = NewType("ArrayLike", array[Any]) # type: ignore
+
 class InputReader(object):
     def read_env_data(self, fn:PathLike) -> Sequence[ArrayLike]:
-        return [array('f', [-1.0])]
+        return [array('f', [-1.0])] # type: ignore
     
     def read_crop_stages(self, fn:PathLike) -> Sequence[ArrayLike]:
-        return [array('f', [-1.0])]
+        return [array('f', [-1.0])] # type: ignore
     
 class TextInputReader(InputReader):   
     # Read the data wrt. climate and soil; assume a text file
@@ -71,17 +78,54 @@ class TextInputReader(InputReader):
     
 class CsvInputReader(InputReader):
     def read_env_data(self, fn:PathLike) -> Sequence[ArrayLike]:
-        # TODO: use csv.reader
-        return [array('f', [-1.0])]
+        result: List[ArrayLike] = []
+        try:
+            import pandas as pd
+            df = pd.read_csv(fn)
+            colname0 = df.columns[0]
+            df.drop([colname0], axis=1, inplace=True)
+            for i, row in df.iterrows():
+                arr: ArrayLike = row.to_numpy() # type: ignore
+                result.append(arr) 
+                
+        except ImportError:
+            print("Pandas is not installed ...")
+        except Exception as e:
+            print(e)
+        finally:
+            return result # type: ignore
     
     def read_crop_stages(self, fn:PathLike) -> Sequence[ArrayLike]:
-        return [array('f', [-1.0])]
+        return [array('f', [-1.0])] # type: ignore
     
 class TsvInputReader(InputReader):
     def read_env_data(self, fn:PathLike) -> Sequence[ArrayLike]:
-        # TODO: use csv reader as follows 
-        # tsv_file = csv.reader(file, delimiter="\t")
-        return [array('f', [-1.0])]
+        result: List[ArrayLike] = []
+        try:
+            import pandas as pd
+            df = pd.read_table(fn)
+            colname0 = df.columns[0]
+            df.drop([colname0], axis=1, inplace=True)
+            for i, row in df.iterrows():
+                arr = row.to_numpy()
+                result.append(arr) # type: ignore
+                
+        except ImportError:
+            print("Pandas is not installed ...")
+        except Exception as e:
+            print(e)
+        finally:
+            return result
     
     def read_crop_stages(self, fn:PathLike) -> Sequence[ArrayLike]:
-        return [array('f', [-1.0])]
+        return [array('f', [-1.0])] # type: ignore
+    
+if __name__ == "__main__":
+    # Some example code
+    csv_reader = CsvInputReader()
+    data = csv_reader.read_env_data("./tests/data/dry_season.csv")
+    pass
+
+    tsv_reader = TsvInputReader()
+    data = tsv_reader.read_env_data("./tests/data/dry_season.tsv")
+    pass

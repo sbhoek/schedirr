@@ -8,11 +8,17 @@ from array import array
 from math import floor
 from cropstage import CropStage
 from configparser import ConfigParser
-from sys import argv
-from customtypes import PathLike, ArrayLike 
+from sys import argv 
 from fileinput import TextInputReader
 
 __author__ = "Steven B. Hoek"
+
+# Declaration of some types - needs to be repeated in every module
+try:
+    import numpy as np
+    ArrayLike = TypeVar("ArrayLike", array, np.ndarray)
+except ImportError:
+    ArrayLike = NewType("ArrayLike", array) # type: ignore
 
 # Declare constants
 eps: float = 0.0000001
@@ -168,8 +174,9 @@ if __name__ == "__main__":
     if not Path(ini_fn).exists(): ValueError("File %s not found!")
     
     # Declare
-    fn_enviro: PathLike
-    fn_cropcult: PathLike
+    PathLike = TypeVar("PathLike", str, Path)    
+    fn_enviro: PathLike # type: ignore
+    fn_cropcult: PathLike # type: ignore
     
     # Prepare to read the input files
     config.read(ini_fn)
@@ -206,7 +213,7 @@ if __name__ == "__main__":
         raise Exception(e)
 
     # Now read the input files    
-    tir = TextInputReader()
-    env_data = tir.read_env_data(fn_enviro)
-    stage_date = tir.read_crop_stages(fn_cropcult)
+    txt_reader = TextInputReader()
+    env_data = txt_reader.read_env_data(fn_enviro)
+    stage_date = txt_reader.read_crop_stages(fn_cropcult)
     irr_proc(u1, un, sp, ep, env_data, stage_date)
