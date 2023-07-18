@@ -184,38 +184,7 @@ class CropStage(object):
     @property
     def time(self) -> float:
         return self.__time    
-    
-def main():
-    # Just for testing. Rectangle with as longest sides AB and CD:
-    '''
-    for sp in [0.5, 1.0, 1.5, 2.0, 2.5]:
-        arr = array('f', 5 * [0.0])
-
-        # Let's calculate things for a crop stage starting halfway the 2nd month
-        mycropstage = CropStage(startperiod=2, time=0.5, duration=0.5, sp=sp)
-        for period in range(2,6):
-            arr[period - mycropstage.start] = mycropstage.area_fraction(period)
-        print(sp, sum(arr))
-    '''
-
-    startperiod = 1
-    time = 0.0
-    duration = 0.5
-    sp = 1.5
-    N = 2
-    
-    L: int = floor(sp - eps) + 1
-    M: int = (L + 1) * N
-    
-    # Loop over all stages within one period
-    arr = array('f', M * [0.0])
-    for period in range(1,4):
-        for k in range(2):
-            mycropstage = CropStage(startperiod=period, time=k*duration, duration=duration, sp=sp)
-            atf = mycropstage.area_time_fraction(3)
-            arr[(period-1)*N + k] = atf
-    print(period, sum(arr))
-
-    
+        
 if __name__ == "__main__":
-    main()  
+    print("This is module cropstage from package schedirr.")
+    print("Run unit tests test_area_fractions and test_area_time_fractions to test the code of this module.")
