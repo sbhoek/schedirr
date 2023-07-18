@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from array import array
 from math import floor
-from cropstage import CropStage
+from cropstage import CropStage # type: ignore
 from configparser import ConfigParser
 from sys import argv 
 from fileinput import TextInputReader
@@ -164,6 +164,10 @@ def irr_proc(u1:int, un:int, sp:float, ep:float, env_data:Sequence[ArrayLike], s
         raise NotImplementedError("Not able to handle function call with u1 > un!")
 
 if __name__ == "__main__":
+    # Immediately make clear that this is the module irreq
+    print("This is module irreq - the main module of package schedirr.")
+    print("Let's calculate irrigation water requirements for your tertiary unit!\n")
+    
     # Get the name of the configuration file
     config = ConfigParser()
     if len(argv) == 1:
