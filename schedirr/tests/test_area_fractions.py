@@ -19,13 +19,13 @@ class TestAreaFractions(unittest.TestCase):
             for month in range(1,13):
                 arr = array('f', 5 * [0.0])
     
-                # Let's calculate things for a crop stage starting in the current month
+                # Let's calculate things for a crop stage starting half way in the current month
                 mycropstage = CropStage(startperiod=month, time=0.5, duration=0.5, sp=sp)
                 for period in range(month, month+5):
                     arr[period - mycropstage.start] = mycropstage.area_fraction(period)
                 print(sp, month, sum(arr))
                 testmsg = "Sum of area fractions for month %s and sp %s not close enough to 1.0!"
-                #self.assertLess(abs(sum(arr) - 1.0), eps, testmsg % (month, sp))
+                self.assertLess(abs(sum(arr) - 1.0), eps, testmsg % (month, sp))
                 
         # Close
         print("\n")
