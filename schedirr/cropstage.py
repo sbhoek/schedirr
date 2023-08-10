@@ -82,7 +82,7 @@ class CropStage(object):
                 elif period == floor(self.start + self.__time + self.__sp - eps):
                     # Last period during which the stage occurs
                     result = (self.__sp + self.__time - L + 1) / self.__sp
-                elif period < L + 1:
+                elif period < self.__start + L - 1:
                     result = 1.0 / self.__sp            
         return result
         
@@ -174,7 +174,7 @@ class CropStage(object):
         return self.__sp
     
     @property
-    def start(self) -> float:
+    def start(self) -> int:
         return self.__start
     
     @property
